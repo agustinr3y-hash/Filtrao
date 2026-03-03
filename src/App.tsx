@@ -107,7 +107,11 @@ export default function App() {
                       <p className="text-xs text-white/50">{recipe.coffee_grams}g • 1:{recipe.ratio}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => { const n = recipes.filter(r => r.id !== recipe.id); setRecipes(n); localStorage.setItem('filtrao_recipes', JSON.stringify(n)); }} className="p-2 text-white/20"><Trash2 size={18}/></button>
+                      <button onClick={() => { 
+                        const n = recipes.filter(r => r.id !== recipe.id); 
+                        setRecipes(n); 
+                        localStorage.setItem('filtrao_recipes', JSON.stringify(n)); 
+                      }} className="p-2 text-white/20"><Trash2 size={18}/></button>
                       <button onClick={() => setActiveBrew(recipe)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center"><Play size={18} fill="black" className="text-black"/></button>
                     </div>
                   </div>
@@ -117,4 +121,32 @@ export default function App() {
 
             <button 
               onClick={() => { setEditingRecipe(null); setShowForm(true); }}
-              className="fixed bottom-10 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full flex items-center justify-center text-black shadow-
+              className="fixed bottom-10 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full flex items-center justify-center text-black shadow-2xl z-50 active:scale-90 transition-transform"
+            >
+              <Plus size={35} />
+            </button>
+          </motion.main>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-[60]">
+            <RecipeForm 
+              method={selectedMethod!} 
+              initialData={editingRecipe || undefined}
+              onClose={() => { setShowForm(false); setEditingRecipe(null); }}
+              onSave={handleSaveRecipe}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
+      {activeBrew && (
+        <div className="fixed inset-0 z-[70]">
+          <BrewMode recipe={activeBrew} onClose={() => setActiveBrew(null)} />
+        </div>
+      )}
+    </div>
+  );
+}
