@@ -14,14 +14,6 @@ interface RecipeFormProps {
   onSave: (recipe: Recipe) => void;
 }
 
-const SensoryLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <rect x="4" y="9" width="4" height="10" rx="1.5" />
-    <rect x="10" y="4" width="4" height="16" rx="1.5" />
-    <rect x="16" y="14" width="4" height="6" rx="1.5" />
-  </svg>
-);
-
 const CoffeeBeanIcon = ({ className, onClick }: { className?: string, onClick?: () => void }) => (
   <button 
     onClick={onClick}
@@ -56,25 +48,9 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
   const coffeeDragRef = useRef(0);
   const coffeeStartValue = useRef(initialData?.coffee_grams || 15);
 
-  const [isDraggingMinutes, setIsDraggingMinutes] = useState(false);
-  const minutesDragRef = useRef(0);
-  const minutesStartValue = useRef(0);
-
-  const [isDraggingSeconds, setIsDraggingSeconds] = useState(false);
-  const secondsDragRef = useRef(0);
-  const secondsStartValue = useRef(0);
-
   const totalWater = Math.round(coffee * ratio);
   const poursWaterSum = pours.reduce((acc, p) => acc + p.water_grams, 0);
   const isWaterExceeded = poursWaterSum > totalWater;
-
-  React.useEffect(() => {
-    const newPours = [...pours];
-    if (newPours[0] && newPours[0].name === 'Bloom') {
-      newPours[0].water_grams = Math.round(coffee * 3);
-      setPours(newPours);
-    }
-  }, [coffee]);
 
   const handleCoffeeStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDraggingCoffee(true);
@@ -94,44 +70,11 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
     }
   };
 
-  const handleMinutesMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDraggingMinutes) return;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    const deltaY = minutesDragRef.current - clientY;
-    const sensitivity = 40;
-    const newValue = Math.max(2, Math.min(5, minutesStartValue.current + Math.round(deltaY / sensitivity)));
-    if (newValue !== minutes) {
-      setMinutes(newValue);
-      sounds.tick();
-    }
-  };
-
-  const handleSecondsMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDraggingSeconds) return;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    const deltaY = secondsDragRef.current - clientY;
-    const sensitivity = 40;
-    const step = 10;
-    const newValue = Math.max(0, Math.min(50, secondsStartValue.current + Math.round(deltaY / sensitivity) * step));
-    if (newValue !== seconds) {
-      setSeconds(newValue);
-      sounds.tick();
-    }
-  };
-
   React.useEffect(() => {
-    const handleMove = (e: MouseEvent | TouchEvent) => {
-      handleCoffeeMove(e);
-      handleMinutesMove(e);
-      handleSecondsMove(e);
-    };
-    const handleEnd = () => {
-      setIsDraggingCoffee(false);
-      setIsDraggingMinutes(false);
-      setIsDraggingSeconds(false);
-    };
+    const handleMove = (e: MouseEvent | TouchEvent) => handleCoffeeMove(e);
+    const handleEnd = () => setIsDraggingCoffee(false);
 
-    if (isDraggingCoffee || isDraggingMinutes || isDraggingSeconds) {
+    if (isDraggingCoffee) {
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleEnd);
       window.addEventListener('touchmove', handleMove);
@@ -143,18 +86,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleEnd);
     };
-  }, [isDraggingCoffee, isDraggingMinutes, isDraggingSeconds]);
-
-  const handleAddPour = () => {
-    const lastPour = pours[pours.length - 1];
-    setPours([...pours, { 
-      name: `Vertido ${pours.length + 1}`, 
-      start_time_seconds: lastPour ? lastPour.start_time_seconds + 30 : 0, 
-      water_grams: 0, 
-      notes: '' 
-    }]);
-    sounds.muted();
-  };
+  }, [isDraggingCoffee]);
 
   const handleSave = () => {
     if (!name) return;
@@ -170,7 +102,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
       sensory_profile: sensoryProfile,
       coffee_details: coffeeDetails
     });
-    sounds.confirm();
   };
 
   return (
@@ -178,91 +109,43 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.4 }}
       className="fixed inset-0 bg-black z-50 flex flex-col"
     >
-      <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="p-8 max-w-md mx-auto">
-          <header className="flex justify-between items-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tighter text-white uppercase">
-              {initialData ? initialData.name : 'NUEVA RECETA'}
-            </h2>
-            <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors">
-              <X size={24} />
-            </button>
-          </header>
+      <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+        <header className="flex justify-between items-center mb-12">
+          <h2 className="text-3xl font-bold text-white uppercase">{initialData ? name : 'NUEVA RECETA'}</h2>
+          <button onClick={onClose} className="p-2 text-white/40"><X size={24} /></button>
+        </header>
 
-          <div className="space-y-12 pb-40">
-            <section className="space-y-6">
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Nombre</span>
-                <div className="flex items-center gap-4 border-b border-white/10 focus-within:border-white transition-colors">
-                  <input 
-                    type="text" 
-                    placeholder="Ej: Etíope Floral"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-transparent py-2 text-2xl font-bold tracking-tight outline-none w-full text-white"
-                  />
-                  <CoffeeBeanIcon className="text-white" onClick={() => setIsCoffeeModalOpen(true)} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                <div className="flex flex-col gap-2 items-center text-center">
-                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Café (g)</span>
-                  <div className="py-2 cursor-ns-resize select-none text-4xl font-bold text-white" onTouchStart={handleCoffeeStart} onMouseDown={handleCoffeeStart}>
-                    {coffee}g
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-center text-center">
-                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Agua Total (g)</span>
-                  <div className="py-2 text-4xl font-bold text-white/40">{totalWater}g</div>
-                </div>
-              </div>
-            </section>
-
-            <section className="space-y-10">
-              <Knob label="Ratio" min={10} max={20} step={0.5} value={ratio} onChange={setRatio} unit="1:x" />
-              <Knob label="Molienda" min={0} max={40} value={grind} onChange={setGrind} unit="Clicks" />
-              <Knob label="Temperatura" min={70} max={99} value={temp} onChange={setTemp} unit="°" />
-            </section>
-
-            <section className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Vertidos</span>
-                <span className={`text-xs font-medium ${isWaterExceeded ? 'text-red-500' : 'text-white/40'}`}>
-                  {poursWaterSum} / {totalWater}g
-                </span>
-              </div>
-              <div className="space-y-4">
-                {pours.map((pour, index) => (
-                  <div key={index} className="bg-white/5 p-4 rounded-2xl space-y-4 border border-white/5">
-                    <div className="flex gap-4">
-                      <input 
-                        type="text" 
-                        value={pour.name} 
-                        onChange={(e) => {
-                          const newPours = [...pours];
-                          newPours[index].name = e.target.value;
-                          setPours(newPours);
-                        }}
-                        className="flex-1 bg-transparent border-b border-white/5 text-sm font-medium text-white outline-none"
-                      />
-                      <button onClick={() => setPours(pours.filter((_, i) => i !== index))} className="text-white/20"><Trash2 size={16} /></button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="number" value={pour.start_time_seconds} onChange={(e) => { const newPours = [...pours]; newPours[index].start_time_seconds = parseInt(e.target.value); setPours(newPours); }} className="bg-transparent border-b border-white/5 text-xl text-white outline-none" />
-                      <input type="number" value={pour.water_grams} onChange={(e) => { const newPours = [...pours]; newPours[index].water_grams = parseFloat(e.target.value); setPours(newPours); }} className="bg-transparent border-b border-white/5 text-xl text-white outline-none" />
-                    </div>
-                  </div>
-                ))}
-                <button onClick={handleAddPour} className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-white/30 flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
-                  <Plus size={14} /> Añadir Vertido
-                </button>
-              </div>
-            </section>
+        <div className="space-y-12 pb-40">
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] uppercase text-white/30">Nombre</span>
+            <div className="flex items-center gap-4 border-b border-white/10">
+              <input 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-transparent py-2 text-2xl font-bold outline-none w-full text-white"
+              />
+              <CoffeeBeanIcon onClick={() => setIsCoffeeModalOpen(true)} />
+            </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-8">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase text-white/30">Café (g)</span>
+              <div onTouchStart={handleCoffeeStart} onMouseDown={handleCoffeeStart} className="text-4xl font-bold py-2">{coffee}g</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase text-white/30">Agua Total</span>
+              <div className="text-4xl font-bold py-2 text-white/40">{totalWater}g</div>
+            </div>
+          </div>
+
+          <Knob label="Ratio" min={10} max={20} step={0.5} value={ratio} onChange={setRatio} unit="1:x" />
+          <Knob label="Molienda" min={0} max={40} value={grind} onChange={setGrind} unit="Clicks" />
+          <Knob label="Temperatura" min={70} max={99} value={temp} onChange={setTemp} unit="°" />
         </div>
       </div>
 
@@ -270,7 +153,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
         <button 
           disabled={!name || isWaterExceeded}
           onClick={handleSave}
-          className="w-full py-5 rounded-2xl bg-white text-black font-bold text-sm uppercase tracking-widest disabled:opacity-20"
+          className="w-full py-5 rounded-2xl bg-white text-black font-bold uppercase tracking-widest disabled:opacity-20"
         >
           Guardar
         </button>
