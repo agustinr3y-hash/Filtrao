@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Settings2, Trash2, Play, Thermometer, Timer } from 'lucide-react';
-import { Method, Recipe, METHODS, formatTime } from './types';
+import { Plus, Trash2, Play, ChevronLeft } from 'lucide-react';
+import { Method, Recipe, METHODS } from './types';
 import { RecipeForm } from './components/RecipeForm';
 import { BrewMode } from './components/BrewMode';
 import { sounds } from './services/sounds';
@@ -13,24 +13,20 @@ export default function App() {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [activeBrew, setActiveBrew] = useState<Recipe | null>(null);
 
-  // CARGAR RECETAS LOCALMENTE (Más rápido)
   useEffect(() => {
     const saved = localStorage.getItem('filtrao_recipes');
-    if (saved) {
-      setRecipes(JSON.parse(saved));
-    }
+    if (saved) setRecipes(JSON.parse(saved));
   }, []);
 
-  // GUARDAR RECETAS LOCALMENTE (Sin errores de API)
   const handleSaveRecipe = (recipe: Recipe) => {
-    let newRecipes;
-    if (editingRecipe) {
-      newRecipes = recipes.map(r => r.id === editingRecipe.id ? { ...recipe, id: r.id } : r);
-    } else {
-      const newRecipe = { ...recipe, id: Date.now() };
-      newRecipes = [...recipes, newRecipe];
-    }
+    const newRecipe = editingRecipe 
+      ? { ...recipe, id: editingRecipe.id, method: selectedMethod }
+      : { ...recipe, id: Date.now(), method: selectedMethod };
     
+    const newRecipes = editingRecipe 
+      ? recipes.map(r => r.id === editingRecipe.id ? newRecipe : r)
+      : [...recipes, newRecipe];
+
     setRecipes(newRecipes);
     localStorage.setItem('filtrao_recipes', JSON.stringify(newRecipes));
     setShowForm(false);
@@ -39,114 +35,99 @@ export default function App() {
   };
 
   const handleDeleteRecipe = (id: number) => {
-    if (!confirm('¿Eliminar esta receta?')) return;
+    if (!confirm('¿Eliminar receta?')) return;
     const newRecipes = recipes.filter(r => r.id !== id);
     setRecipes(newRecipes);
     localStorage.setItem('filtrao_recipes', JSON.stringify(newRecipes));
-    sounds.muted();
   };
 
   const [methodIndex, setMethodIndex] = useState(0);
-  const [isDraggingMethod, setIsDraggingMethod] = useState(false);
-  const methodDragRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef(0);
 
-  const handleMethodStart = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDraggingMethod(true);
-    methodDragRef.current = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    dragRef.current = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
   };
 
-  const handleMethodMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDraggingMethod) return;
+  const handleMove = (e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    const deltaY = methodDragRef.current - clientY;
-    if (Math.abs(deltaY) > 60) {
-      const dir = deltaY > 0 ? 1 : -1;
-      let next = (methodIndex + dir) % METHODS.length;
-      if (next < 0) next = METHODS.length - 1;
+    const delta = dragRef.current - clientY;
+    if (Math.abs(delta) > 60) {
+      const next = (methodIndex + (delta > 0 ? 1 : -1) + METHODS.length) % METHODS.length;
       setMethodIndex(next);
-      methodDragRef.current = clientY;
+      dragRef.current = clientY;
       sounds.tick();
     }
   };
 
   useEffect(() => {
-    const end = () => setIsDraggingMethod(false);
-    if (isDraggingMethod) {
-      window.addEventListener('mousemove', handleMethodMove);
-      window.addEventListener('mouseup', end);
-      window.addEventListener('touchmove', handleMethodMove);
+    const end = () => setIsDragging(false);
+    if (isDragging) {
+      window.addEventListener('touchmove', handleMove);
       window.addEventListener('touchend', end);
     }
     return () => {
-      window.removeEventListener('mousemove', handleMethodMove);
-      window.removeEventListener('mouseup', end);
-      window.removeEventListener('touchmove', handleMethodMove);
+      window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', end);
     };
-  }, [isDraggingMethod, methodIndex]);
+  }, [isDragging, methodIndex]);
 
-  const currentMethod = METHODS[methodIndex];
   const recipesByMethod = recipes.filter(r => r.method === selectedMethod);
 
   return (
-    <div className="min-h-screen max-w-md mx-auto relative bg-black text-white overflow-hidden">
+    <div className="fixed inset-0 bg-black text-white flex flex-col overflow-hidden select-none">
       <AnimatePresence mode="wait">
         {!selectedMethod ? (
-          <motion.main key="home" className="p-8 flex flex-col items-center justify-between h-screen">
-            <h1 className="text-5xl font-bold tracking-tighter pt-10">Filtrao</h1>
-            
-            <div 
-              className="flex-1 flex items-center justify-center w-full cursor-ns-resize"
-              onMouseDown={handleMethodStart}
-              onTouchStart={handleMethodStart}
-            >
-              <motion.button
-                key={currentMethod}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                onClick={() => setSelectedMethod(currentMethod)}
-                className="text-4xl font-medium"
+          <motion.main key="home" className="flex-1 flex flex-col items-center justify-between p-10 py-20">
+            <h1 className="text-5xl font-bold tracking-tighter">Filtrao</h1>
+            <div className="flex-1 flex items-center justify-center w-full" onTouchStart={handleStart}>
+              <motion.button 
+                key={METHODS[methodIndex]}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setSelectedMethod(METHODS[methodIndex])}
+                className="text-4xl font-medium active:scale-90 transition-transform"
               >
-                {currentMethod}
+                {METHODS[methodIndex]}
               </motion.button>
             </div>
-            <div className="pb-20 text-muted opacity-40 text-sm">Deslizá para cambiar método</div>
+            <p className="text-white/20 text-sm">Desliza para elegir método</p>
           </motion.main>
         ) : (
-          <motion.main key="list" className="p-6 pt-12 flex flex-col h-screen">
+          <motion.main key="list" className="flex-1 flex flex-col p-6 pt-14">
             <header className="flex items-center justify-between mb-8">
-              <button onClick={() => setSelectedMethod(null)} className="text-2xl">‹</button>
+              <button onClick={() => setSelectedMethod(null)} className="p-2 -ml-2"><ChevronLeft size={32}/></button>
               <h2 className="text-2xl font-bold">{selectedMethod}</h2>
-              <div className="w-8" />
+              <div className="w-10" />
             </header>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pb-32 no-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-4 pb-40 no-scrollbar">
               {recipesByMethod.length === 0 ? (
-                <p className="text-center opacity-30 mt-20 italic">No hay recetas aún.</p>
+                <div className="h-full flex items-center justify-center opacity-20 italic">No hay recetas aún.</div>
               ) : (
                 recipesByMethod.map(recipe => (
-                  <div key={recipe.id} className="bg-white/5 p-5 rounded-[2rem] border border-white/10 relative group">
-                    <div className="pr-12" onClick={() => { setEditingRecipe(recipe); setShowForm(true); }}>
-                      <h3 className="text-xl font-bold">{recipe.name}</h3>
-                      <p className="text-xs text-accent opacity-70">{recipe.coffee_grams}g • 1:{recipe.ratio}</p>
+                  <div key={recipe.id} className="bg-white/5 p-5 rounded-3xl border border-white/10 flex justify-between items-center">
+                    <div onClick={() => { setEditingRecipe(recipe); setShowForm(true); }}>
+                      <h3 className="text-lg font-bold">{recipe.name}</h3>
+                      <p className="text-xs text-orange-400">{recipe.coffee_grams}g • 1:{recipe.ratio}</p>
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                       <button onClick={() => handleDeleteRecipe(recipe.id!)} className="p-2 opacity-0 group-hover:opacity-100 text-red-400"><Trash2 size={16}/></button>
-                       <button onClick={() => setActiveBrew(recipe)} className="w-10 h-10 bg-accent rounded-full flex items-center justify-center text-black"><Play size={16} fill="black"/></button>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDeleteRecipe(recipe.id!)} className="p-2 text-white/20"><Trash2 size={18}/></button>
+                      <button onClick={() => setActiveBrew(recipe)} className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center"><Play size={18} fill="black"/></button>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <footer className="fixed bottom-6 left-0 right-0 flex justify-center">
-              <button 
-                onClick={() => setShowForm(true)}
-                className="w-16 h-16 bg-accent rounded-full flex items-center justify-center text-black shadow-lg"
-              >
-                <Plus size={32} />
-              </button>
-            </footer>
+            <button 
+              onClick={() => { setEditingRecipe(null); setShowForm(true); }}
+              className="fixed bottom-10 left-1/2 -translate-x-1/2 w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center text-black shadow-2xl z-50 active:scale-90 transition-transform"
+            >
+              <Plus size={35} />
+            </button>
           </motion.main>
         )}
       </AnimatePresence>
