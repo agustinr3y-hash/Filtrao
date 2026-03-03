@@ -4,7 +4,6 @@ import { Plus, Trash2, Play, ChevronLeft } from 'lucide-react';
 import { Method, Recipe, METHODS } from './types';
 import { RecipeForm } from './components/RecipeForm';
 import { BrewMode } from './components/BrewMode';
-import { sounds } from './services/sounds';
 
 export default function App() {
   const [selectedMethod, setSelectedMethod] = useState<Method | null>(null);
@@ -31,7 +30,6 @@ export default function App() {
     localStorage.setItem('filtrao_recipes', JSON.stringify(newRecipes));
     setShowForm(false);
     setEditingRecipe(null);
-    sounds.confirm();
   };
 
   const [methodIndex, setMethodIndex] = useState(0);
@@ -51,7 +49,6 @@ export default function App() {
       const next = (methodIndex + (delta > 0 ? 1 : -1) + METHODS.length) % METHODS.length;
       setMethodIndex(next);
       dragRef.current = clientY;
-      sounds.tick();
     }
   };
 
