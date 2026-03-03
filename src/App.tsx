@@ -97,4 +97,59 @@ export default function App() {
           </motion.main>
         ) : (
           <motion.main key="list" className="flex-1 flex flex-col p-6 pt-14 relative z-0">
-            <header
+            <header className="flex items-center justify-between mb-8 sticky top-0 bg-black z-20 pb-4">
+              <button onClick={() => setSelectedMethod(null)} className="p-2 -ml-2"><ChevronLeft size={32}/></button>
+              <h2 className="text-2xl font-bold">{selectedMethod}</h2>
+              <div className="w-10" />
+            </header>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pb-40 no-scrollbar">
+              {recipesByMethod.length === 0 ? (
+                <div className="h-full flex items-center justify-center opacity-20 italic py-20">No hay recetas aún.</div>
+              ) : (
+                recipesByMethod.map(recipe => (
+                  <div key={recipe.id} className="bg-white/5 p-5 rounded-3xl border border-white/10 flex justify-between items-center">
+                    <div onClick={() => { setEditingRecipe(recipe); setShowForm(true); }}>
+                      <h3 className="text-lg font-bold">{recipe.name}</h3>
+                      <p className="text-xs text-white/50">{recipe.coffee_grams}g • 1:{recipe.ratio}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDeleteRecipe(recipe.id!)} className="p-2 text-white/20"><Trash2 size={18}/></button>
+                      <button onClick={() => setActiveBrew(recipe)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center"><Play size={18} fill="black" className="text-black"/></button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button 
+              onClick={() => { setEditingRecipe(null); setShowForm(true); }}
+              className="fixed bottom-10 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full flex items-center justify-center text-black shadow-2xl z-50 active:scale-90 transition-transform"
+            >
+              <Plus size={35} />
+            </button>
+          </motion.main>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-[60]">
+            <RecipeForm 
+              method={selectedMethod!} 
+              initialData={editingRecipe || undefined}
+              onClose={() => { setShowForm(false); setEditingRecipe(null); }}
+              onSave={handleSaveRecipe}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+
+      {activeBrew && (
+        <div className="fixed inset-0 z-[70]">
+          <BrewMode recipe={activeBrew} onClose={() => setActiveBrew(null)} />
+        </div>
+      )}
+    </div>
+  );
+}
