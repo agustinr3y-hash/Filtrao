@@ -211,4 +211,73 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
               <div className="grid grid-cols-2 gap-8">
                 <div className="flex flex-col gap-2 items-center text-center">
                   <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Café (g)</span>
-                  <div className="py-2 cursor-ns-
+                  <div className="py-2 cursor-ns-resize select-none text-4xl font-bold text-white" onTouchStart={handleCoffeeStart} onMouseDown={handleCoffeeStart}>
+                    {coffee}g
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 items-center text-center">
+                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Agua Total (g)</span>
+                  <div className="py-2 text-4xl font-bold text-white/40">{totalWater}g</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-10">
+              <Knob label="Ratio" min={10} max={20} step={0.5} value={ratio} onChange={setRatio} unit="1:x" />
+              <Knob label="Molienda" min={0} max={40} value={grind} onChange={setGrind} unit="Clicks" />
+              <Knob label="Temperatura" min={70} max={99} value={temp} onChange={setTemp} unit="°" />
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Vertidos</span>
+                <span className={`text-xs font-medium ${isWaterExceeded ? 'text-red-500' : 'text-white/40'}`}>
+                  {poursWaterSum} / {totalWater}g
+                </span>
+              </div>
+              <div className="space-y-4">
+                {pours.map((pour, index) => (
+                  <div key={index} className="bg-white/5 p-4 rounded-2xl space-y-4 border border-white/5">
+                    <div className="flex gap-4">
+                      <input 
+                        type="text" 
+                        value={pour.name} 
+                        onChange={(e) => {
+                          const newPours = [...pours];
+                          newPours[index].name = e.target.value;
+                          setPours(newPours);
+                        }}
+                        className="flex-1 bg-transparent border-b border-white/5 text-sm font-medium text-white outline-none"
+                      />
+                      <button onClick={() => setPours(pours.filter((_, i) => i !== index))} className="text-white/20"><Trash2 size={16} /></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <input type="number" value={pour.start_time_seconds} onChange={(e) => { const newPours = [...pours]; newPours[index].start_time_seconds = parseInt(e.target.value); setPours(newPours); }} className="bg-transparent border-b border-white/5 text-xl text-white outline-none" />
+                      <input type="number" value={pour.water_grams} onChange={(e) => { const newPours = [...pours]; newPours[index].water_grams = parseFloat(e.target.value); setPours(newPours); }} className="bg-transparent border-b border-white/5 text-xl text-white outline-none" />
+                    </div>
+                  </div>
+                ))}
+                <button onClick={handleAddPour} className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-white/30 flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
+                  <Plus size={14} /> Añadir Vertido
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <footer className="p-8">
+        <button 
+          disabled={!name || isWaterExceeded}
+          onClick={handleSave}
+          className="w-full py-5 rounded-2xl bg-white text-black font-bold text-sm uppercase tracking-widest disabled:opacity-20"
+        >
+          Guardar
+        </button>
+      </footer>
+
+      <SensoryProfileModal isOpen={isSensoryModalOpen} onClose={() => setIsSensoryModalOpen(false)} initialValue={sensoryProfile} onSave={setSensoryProfile} />
+      <CoffeeDetailsModal isOpen={isCoffeeModalOpen} onClose={() => setIsCoffeeModalOpen(false)} initialValue={coffeeDetails} onSave={setCoffeeDetails} />
+    </motion.div>
+  );
+};
