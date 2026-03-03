@@ -31,7 +31,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
   const [temp, setTemp] = useState(initialData?.temp_c || 92);
   
   const initialTotalSeconds = initialData?.total_time_seconds || 150; 
-  const [minutes, setMinutes] = useState(Math.max(2, Math.min(5, Math.floor(initialTotalSeconds / 60))));
+  const [minutes, setMinutes] = useState(Math.floor(initialTotalSeconds / 60));
   const [seconds, setSeconds] = useState(Math.floor((initialTotalSeconds % 60) / 10) * 10);
 
   const [sensoryProfile, setSensoryProfile] = useState<SensoryProfile | undefined>(initialData?.sensory_profile);
@@ -88,6 +88,17 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
     };
   }, [isDraggingCoffee]);
 
+  const handleAddPour = () => {
+    const lastPour = pours[pours.length - 1];
+    setPours([...pours, { 
+      name: `Vertido ${pours.length + 1}`, 
+      start_time_seconds: lastPour ? lastPour.start_time_seconds + 30 : 0, 
+      water_grams: 0, 
+      notes: '' 
+    }]);
+    sounds.muted();
+  };
+
   const handleSave = () => {
     if (!name) return;
     onSave({
@@ -102,6 +113,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
       sensory_profile: sensoryProfile,
       coffee_details: coffeeDetails
     });
+    sounds.confirm();
   };
 
   return (
@@ -109,58 +121,49 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({ method, initialData, onC
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 bg-black z-50 flex flex-col"
     >
-      <div className="flex-1 overflow-y-auto no-scrollbar p-8">
-        <header className="flex justify-between items-center mb-12">
-          <h2 className="text-3xl font-bold text-white uppercase">{initialData ? name : 'NUEVA RECETA'}</h2>
-          <button onClick={onClose} className="p-2 text-white/40"><X size={24} /></button>
-        </header>
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="p-8 max-w-md mx-auto">
+          <header className="flex justify-between items-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tighter text-white uppercase">
+              {initialData ? 'EDITAR RECETA' : 'NUEVA RECETA'}
+            </h2>
+            <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+          </header>
 
-        <div className="space-y-12 pb-40">
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] uppercase text-white/30">Nombre</span>
-            <div className="flex items-center gap-4 border-b border-white/10">
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-transparent py-2 text-2xl font-bold outline-none w-full text-white"
-              />
-              <CoffeeBeanIcon onClick={() => setIsCoffeeModalOpen(true)} />
-            </div>
-          </div>
+          <div className="space-y-12 pb-40">
+            <section className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Nombre</span>
+                <div className="flex items-center gap-4 border-b border-white/10 focus-within:border-white transition-colors">
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Etíope Floral"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-transparent py-2 text-2xl font-bold tracking-tight outline-none w-full text-white"
+                  />
+                  <CoffeeBeanIcon className="text-white" onClick={() => setIsCoffeeModalOpen(true)} />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-8">
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase text-white/30">Café (g)</span>
-              <div onTouchStart={handleCoffeeStart} onMouseDown={handleCoffeeStart} className="text-4xl font-bold py-2">{coffee}g</div>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase text-white/30">Agua Total</span>
-              <div className="text-4xl font-bold py-2 text-white/40">{totalWater}g</div>
-            </div>
-          </div>
-
-          <Knob label="Ratio" min={10} max={20} step={0.5} value={ratio} onChange={setRatio} unit="1:x" />
-          <Knob label="Molienda" min={0} max={40} value={grind} onChange={setGrind} unit="Clicks" />
-          <Knob label="Temperatura" min={70} max={99} value={temp} onChange={setTemp} unit="°" />
-        </div>
-      </div>
-
-      <footer className="p-8">
-        <button 
-          disabled={!name || isWaterExceeded}
-          onClick={handleSave}
-          className="w-full py-5 rounded-2xl bg-white text-black font-bold uppercase tracking-widest disabled:opacity-20"
-        >
-          Guardar
-        </button>
-      </footer>
-
-      <SensoryProfileModal isOpen={isSensoryModalOpen} onClose={() => setIsSensoryModalOpen(false)} initialValue={sensoryProfile} onSave={setSensoryProfile} />
-      <CoffeeDetailsModal isOpen={isCoffeeModalOpen} onClose={() => setIsCoffeeModalOpen(false)} initialValue={coffeeDetails} onSave={setCoffeeDetails} />
-    </motion.div>
-  );
-};
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex flex-col gap-2 items-center text-center">
+                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Café (g)</span>
+                  <div 
+                    className="py-2 cursor-ns-resize select-none text-4xl font-bold text-white"
+                    onMouseDown={handleCoffeeStart}
+                    onTouchStart={handleCoffeeStart}
+                  >
+                    {coffee}g
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 items-center text-center">
+                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Agua Total (g)</span>
+                  <div className="py-2 text-4xl font-bold text-white/40">{totalWater}g</div>
+                </div>
+              </div>
